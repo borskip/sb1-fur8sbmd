@@ -7,17 +7,26 @@ import { useAuth } from '../lib/auth';
 interface MovieModalProps {
   movie: MovieDetails;
   onClose: () => void;
+  onAddToPersonal?: (movie: MovieDetails) => void;
+  onAddToPersonalWatchlist?: (movie: MovieDetails) => void;
+  onAddToShared?: (movie: MovieDetails) => void;
 }
 
-export function MovieModal({ movie, onClose }: MovieModalProps) {
+export function MovieModal({ 
+  movie, 
+  onClose, 
+  onAddToPersonal, 
+  onAddToPersonalWatchlist, 
+  onAddToShared 
+}: MovieModalProps) {
   const { user } = useAuth();
   const [rating, setRating] = useState(0);
   const [isRating, setIsRating] = useState(false);
   
   const {
-    addToPersonalWatchlist,
-    addToPersonal,
-    addToShared,
+    addToPersonalWatchlist: defaultAddToPersonalWatchlist,
+    addToPersonal: defaultAddToPersonal,
+    addToShared: defaultAddToShared,
     toggleWatched,
     rateMovie
   } = useWatchlist(user?.id || '');
@@ -26,17 +35,29 @@ export function MovieModal({ movie, onClose }: MovieModalProps) {
     try {
       switch (action) {
         case 'watchlist':
-          await addToPersonalWatchlist.mutateAsync(movie);
+          if (onAddToPersonalWatchlist) {
+            onAddToPersonalWatchlist(movie);
+          } else {
+            await defaultAddToPersonalWatchlist.mutateAsync(movie);
+          }
           break;
         case 'watched':
-          await addToPersonal.mutateAsync(movie);
+          if (onAddToPersonal) {
+            onAddToPersonal(movie);
+          } else {
+            await defaultAddToPersonal.mutateAsync(movie);
+          }
           await toggleWatched.mutateAsync(movie);
           if (rating > 0) {
             await rateMovie.mutateAsync({ movieId: movie.id, rating });
           }
           break;
         case 'shared':
-          await addToShared.mutateAsync(movie);
+          if (onAddToShared) {
+            onAddToShared(movie);
+          } else {
+            await defaultAddToShared.mutateAsync(movie);
+          }
           break;
       }
       onClose();

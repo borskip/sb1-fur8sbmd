@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Star, Clock, Calendar, Plus, Check, Heart, MoreHorizontal } from 'lucide-react';
+import { Star, Clock, Calendar, Plus, Check, Heart, MoreHorizontal, Film } from 'lucide-react';
 import type { Movie } from '../lib/tmdb';
 import { useWatchlist } from '../hooks/useWatchlist';
 import { useAuth } from '../lib/auth';

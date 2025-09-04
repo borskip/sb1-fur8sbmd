@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { tmdbService } from '../lib/tmdb';
 import { MovieCard } from './MovieCard';
 import { PersonCard } from './PersonCard';
+import { MovieModal } from './MovieModal';
 import { useDebouncedCallback } from 'use-debounce';
 import type { Movie } from '../lib/tmdb';
 
@@ -393,7 +394,7 @@ export function AdvancedSearch() {
       {/* Movie Modal */}
       {selectedMovie && (
         <MovieModal
-          movie={selectedMovie}
+          movie={selectedMovie as any}
           onClose={() => setSelectedMovie(null)}
         />
       )}
