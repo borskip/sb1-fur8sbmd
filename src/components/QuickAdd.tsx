@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { X, Search, Plus, Heart, Check, Star } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
-import { searchMovies } from '../lib/tmdb';
+import { tmdbService } from '../lib/tmdb';
 import { useWatchlist } from '../hooks/useWatchlist';
 import { useAuth } from '../lib/auth';
 import { useDebouncedCallback } from 'use-debounce';
@@ -28,7 +28,7 @@ export function QuickAdd({ onClose }: QuickAddProps) {
 
   const { data: searchResults, isLoading } = useQuery({
     queryKey: ['quickSearch', query],
-    queryFn: () => searchMovies(query),
+    queryFn: () => tmdbService.searchMovies(query),
     enabled: query.length > 2,
   });
 
