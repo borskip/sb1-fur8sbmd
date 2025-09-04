@@ -22,7 +22,7 @@ export function RecentActivity() {
         
         supabase
           .from('ratings')
-          .select('*, personal_watchlist!inner(movie_data)')
+          .select('*')
           .gte('created_at', sevenDaysAgo.toISOString())
           .order('created_at', { ascending: false })
           .limit(10),
@@ -48,7 +48,7 @@ export function RecentActivity() {
         ...(ratings.data || []).map(item => ({
           type: 'rated' as const,
           user_id: item.user_id,
-          movie: item.personal_watchlist.movie_data,
+          movie: { id: item.movie_id, title: `Movie ${item.movie_id}` }, // Simplified for now
           rating: item.rating,
           timestamp: item.created_at,
           id: `rated-${item.id}`
