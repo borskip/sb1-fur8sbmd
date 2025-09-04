@@ -290,3 +290,70 @@ export async function getRecommendedMovies(
     return [];
   }
 }
+
+export async function searchPeople(query: string): Promise<{ results: any[] }> {
+  try {
+    const url = `${TMDB_BASE_URL}/search/person?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(query)}`;
+    const data = await fetchWithCache(url);
+    return data;
+  } catch (error) {
+    console.error('People search failed:', error);
+    return { results: [] };
+  }
+}
+
+export async function getMoviesByGenre(genreId: string): Promise<Movie[]> {
+  try {
+    const url = `${TMDB_BASE_URL}/discover/movie?api_key=${TMDB_API_KEY}&with_genres=${genreId}&sort_by=popularity.desc`;
+    const data = await fetchWithCache(url);
+    return data.results || [];
+  } catch (error) {
+    console.error('Genre search failed:', error);
+    return [];
+  }
+}
+
+export async function getMoviesByYear(year: number): Promise<Movie[]> {
+  try {
+    const url = `${TMDB_BASE_URL}/discover/movie?api_key=${TMDB_API_KEY}&primary_release_year=${year}&sort_by=popularity.desc`;
+    const data = await fetchWithCache(url);
+    return data.results || [];
+  } catch (error) {
+    console.error('Year search failed:', error);
+    return [];
+  }
+}
+
+export async function getPopularMovies(): Promise<Movie[]> {
+  try {
+    const url = `${TMDB_BASE_URL}/movie/popular?api_key=${TMDB_API_KEY}`;
+    const data = await fetchWithCache(url);
+    return data.results || [];
+  } catch (error) {
+    console.error('Failed to get popular movies:', error);
+    return [];
+  }
+}
+
+export async function getPersonMovies(personId: number): Promise<Movie[]> {
+  try {
+    const url = `${TMDB_BASE_URL}/person/${personId}/movie_credits?api_key=${TMDB_API_KEY}`;
+    const data = await fetchWithCache(url);
+    
+    // Combine cast and crew, remove duplicates, sort by popularity
+    const allMovies = [...(data.cast || []), ...(data.crew || [])]
+      .filter((movie: any) => movie.poster_path && movie.release_date)
+      .reduce((acc: any[], movie: any) => {
+        if (!acc.find(m => m.id === movie.id)) {
+          acc.push(movie);
+        }
+        return acc;
+      }, [])
+      .sort((a: any, b: any) => b.popularity - a.popularity);
+    
+    return allMovies.slice(0, 20);
+  } catch (error) {
+    console.error('Failed to get person movies:', error);
+    return [];
+  }
+}
