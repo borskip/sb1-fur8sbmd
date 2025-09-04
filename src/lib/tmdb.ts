@@ -1,4 +1,4 @@
-const TMDB_API_KEY = '8b7a8c9d2e3f4a5b6c7d8e9f0a1b2c3d';
+const TMDB_API_KEY = import.meta.env.VITE_TMDB_API_KEY;
 const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
 
 export interface Movie {
@@ -106,6 +106,10 @@ class TMDBService {
     
     if (cached && Date.now() - cached.timestamp < this.cacheTimeout) {
       return cached.data;
+    }
+
+    if (!TMDB_API_KEY) {
+      throw new Error('TMDB API key is not configured. Please add VITE_TMDB_API_KEY to your .env file.');
     }
 
     try {
