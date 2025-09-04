@@ -228,3 +228,48 @@ class TMDBService {
     return this.fetchWithCache<SearchResponse>(url);
   }
 }
+
+export const tmdbService = new TMDBService();
+
+// Export function for getting personalized recommendations
+export async function getRecommendedMovies(
+  favoriteMovieIds: number[], 
+  watchedMovieIds: number[]
+): Promise<MovieDetails[]> {
+  if (favoriteMovieIds.length === 0) {
+    return [];
+  }
+
+  const allRecommendations = new Map<number, MovieDetails>();
+  
+  // Get recommendations from each favorite movie
+  for (const movieId of favoriteMovieIds.slice(0, 5)) { // Limit to 5 movies to avoid too many API calls
+    try {
+      const recommendations = await tmdbService.getMovieRecommendations(movieId);
+      
+      for (const movie of recommendations.results) {
+        // Skip if already watched or already in recommendations
+        if (watchedMovieIds.includes(movie.id) || allRecommendations.has(movie.id)) {
+          continue;
+        }
+        
+        // Get full movie details
+        const movieDetails = await tmdbService.getMovieDetails(movie.id);
+        allRecommendations.set(movie.id, movieDetails);
+        
+        // Limit total recommendations
+        if (allRecommendations.size >= 20) {
+          break;
+        }
+      }
+      
+      if (allRecommendations.size >= 20) {
+        break;
+      }
+    } catch (error) {
+      console.error(`Failed to get recommendations for movie ${movieId}:`, error);
+    }
+  }
+  
+  return Array.from(allRecommendations.values());
+}
