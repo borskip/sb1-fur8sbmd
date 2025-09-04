@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Filter, X, User, Film, Calendar, Star, Zap, Loader2 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
-import { searchMovies, searchPeople, getMoviesByGenre, getMoviesByYear, getPopularMovies } from '../lib/tmdb';
+import { tmdbService } from '../lib/tmdb';
 import { MovieCard } from './MovieCard';
 import { PersonCard } from './PersonCard';
 import { useDebouncedCallback } from 'use-debounce';
@@ -27,7 +27,7 @@ export function AdvancedSearch() {
   // Popular movies for initial state
   const { data: popularMovies } = useQuery({
     queryKey: ['popularMovies'],
-    queryFn: getPopularMovies,
+    queryFn: () => tmdbService.getPopularMovies().then(response => response.results),
     staleTime: 30 * 60 * 1000, // 30 minutes
   });
 
@@ -52,18 +52,18 @@ export function AdvancedSearch() {
         switch (searchType) {
           case 'movies':
             if (query) {
-              const movieResults = await searchMovies(query);
-              movies = movieResults.movies;
+              const movieResults = await tmdbService.searchMovies(query);
+              movies = movieResults.results;
             }
             break;
 
           case 'people':
             if (query) {
-              const peopleResults = await searchPeople(query);
+              const peopleResults = await tmdbService.searchPeople(query);
               people = peopleResults.results || [];
               // Get movies for the first person found
               if (people.length > 0) {
-                const personMovies = await getMoviesByPerson(people[0].id);
+                const personMovies = await tmdbService.getPersonMovies(people[0].id);
                 movies = personMovies;
               }
             }
@@ -71,29 +71,31 @@ export function AdvancedSearch() {
 
           case 'genre':
             if (selectedGenre) {
-              movies = await getMoviesByGenre(selectedGenre);
+              const genreResults = await tmdbService.getMoviesByGenre(parseInt(selectedGenre));
+              movies = genreResults.results;
             }
             break;
 
           case 'year':
             if (selectedYear) {
-              movies = await getMoviesByYear(parseInt(selectedYear));
+              const yearResults = await tmdbService.getMoviesByYear(parseInt(selectedYear));
+              movies = yearResults.results;
             }
             break;
 
           default: // 'all'
             if (query) {
               const [movieResults, peopleResults] = await Promise.all([
-                searchMovies(query),
-                searchPeople(query)
+                tmdbService.searchMovies(query),
+                tmdbService.searchPeople(query)
               ]);
               
-              movies = movieResults.movies;
+              movies = movieResults.results;
               people = peopleResults.results || [];
 
               // If we found people, also get their movies
               if (people.length > 0 && movies.length < 10) {
-                const personMovies = await getMoviesByPerson(people[0].id);
+                const personMovies = await tmdbService.getPersonMovies(people[0].id);
                 // Merge and deduplicate
                 const movieIds = new Set(movies.map(m => m.id));
                 const newMovies = personMovies.filter(m => !movieIds.has(m.id));
@@ -397,30 +399,4 @@ export function AdvancedSearch() {
       )}
     </div>
   );
-}
-
-// Helper function to get movies by person
-async function getMoviesByPerson(personId: number): Promise<Movie[]> {
-  try {
-    const response = await fetch(
-      `https://api.themoviedb.org/3/person/${personId}/movie_credits?api_key=${import.meta.env.VITE_TMDB_API_KEY}`
-    );
-    const data = await response.json();
-    
-    // Combine cast and crew, remove duplicates, sort by popularity
-    const allMovies = [...(data.cast || []), ...(data.crew || [])]
-      .filter((movie: any) => movie.poster_path && movie.release_date)
-      .reduce((acc: any[], movie: any) => {
-        if (!acc.find(m => m.id === movie.id)) {
-          acc.push(movie);
-        }
-        return acc;
-      }, [])
-      .sort((a: any, b: any) => b.popularity - a.popularity);
-    
-    return allMovies.slice(0, 20);
-  } catch (error) {
-    console.error('Error fetching person movies:', error);
-    return [];
-  }
 }
