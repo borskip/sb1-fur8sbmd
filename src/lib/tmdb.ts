@@ -1,238 +1,227 @@
-import React, { useState } from 'react';
-import { X, Star, Calendar, Clock, Users, Heart, Check, Plus, Play, Award, DollarSign } from 'lucide-react';
-import type { MovieDetails } from '../lib/tmdb';
-import { useWatchlist } from '../hooks/useWatchlist';
-import { useAuth } from '../lib/auth';
+const TMDB_API_KEY = '8b7a8c9d2e3f4a5b6c7d8e9f0a1b2c3d';
+const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
 
-interface MovieModalProps {
-  movie: MovieDetails;
-  onClose: () => void;
+export interface Movie {
+  id: number;
+  title: string;
+  overview: string;
+  poster_path: string | null;
+  backdrop_path: string | null;
+  release_date: string;
+  vote_average: number;
+  vote_count: number;
+  genre_ids: number[];
+  popularity: number;
+  adult: boolean;
+  original_language: string;
+  original_title: string;
+  video: boolean;
 }
 
-export function MovieModal({ movie, onClose }: MovieModalProps) {
-  const { user } = useAuth();
-  const [rating, setRating] = useState(0);
-  const [isRating, setIsRating] = useState(false);
-  
-  const {
-    addToPersonalWatchlist,
-    addToPersonal,
-    addToShared,
-    toggleWatched,
-    rateMovie
-  } = useWatchlist(user?.id || '');
-
-  const handleAction = async (action: 'watchlist' | 'watched' | 'shared') => {
-    try {
-      switch (action) {
-        case 'watchlist':
-          await addToPersonalWatchlist.mutateAsync(movie);
-          break;
-        case 'watched':
-          await addToPersonal.mutateAsync(movie);
-          await toggleWatched.mutateAsync(movie);
-          if (rating > 0) {
-            await rateMovie.mutateAsync({ movieId: movie.id, rating });
-          }
-          break;
-        case 'shared':
-          await addToShared.mutateAsync(movie);
-          break;
-      }
-      onClose();
-    } catch (error) {
-      console.error('Action failed:', error);
-    }
+export interface MovieDetails extends Movie {
+  runtime: number | null;
+  genres: { id: number; name: string }[];
+  production_companies: { id: number; name: string; logo_path: string | null }[];
+  production_countries: { iso_3166_1: string; name: string }[];
+  spoken_languages: { iso_639_1: string; name: string }[];
+  status: string;
+  tagline: string | null;
+  budget: number;
+  revenue: number;
+  homepage: string | null;
+  imdb_id: string | null;
+  belongs_to_collection: {
+    id: number;
+    name: string;
+    poster_path: string | null;
+    backdrop_path: string | null;
+  } | null;
+  videos?: {
+    results: {
+      id: string;
+      key: string;
+      name: string;
+      site: string;
+      type: string;
+      official: boolean;
+    }[];
   };
-
-  const trailer = movie.videos?.results.find(
-    video => video.site === 'YouTube' && video.type === 'Trailer'
-  );
-
-  return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50" onClick={onClose}>
-      <div className="bg-white rounded-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-        {/* Header */}
-        <div className="relative h-64 bg-gradient-to-b from-gray-900 to-gray-800">
-          {movie.poster_path && (
-            <img
-              src={`https://image.tmdb.org/t/p/original${movie.poster_path}`}
-              alt={movie.title}
-              className="w-full h-full object-cover opacity-40"
-            />
-          )}
-          
-          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
-          
-          <div className="absolute bottom-6 left-6 right-6">
-            <h1 className="text-3xl font-bold text-white mb-2">{movie.title}</h1>
-            <div className="flex items-center space-x-4 text-gray-300">
-              <span>{movie.release_date?.split('-')[0]}</span>
-              {movie.runtime && (
-                <>
-                  <span>•</span>
-                  <span>{movie.runtime} min</span>
-                </>
-              )}
-              {movie.vote_average && (
-                <>
-                  <span>•</span>
-                  <div className="flex items-center space-x-1">
-                    <Star className="w-4 h-4 fill-current text-yellow-400" />
-                    <span>{movie.vote_average.toFixed(1)}</span>
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
-
-          <button
-            onClick={onClose}
-            className="absolute top-4 right-4 p-2 bg-black/50 text-white rounded-full hover:bg-black/70 transition-colors"
-          >
-            <X className="w-6 h-6" />
-          </button>
-        </div>
-
-        {/* Content */}
-        <div className="p-6 space-y-6">
-          {/* Quick Actions */}
-          <div className="flex flex-wrap gap-3">
-            <button
-              onClick={() => handleAction('watchlist')}
-              className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
-            >
-              <Heart className="w-4 h-4" />
-              <span>Add to Watchlist</span>
-            </button>
-            
-            <button
-              onClick={() => setIsRating(!isRating)}
-              className="flex items-center space-x-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors"
-            >
-              <Check className="w-4 h-4" />
-              <span>Mark as Watched</span>
-            </button>
-            
-            <button
-              onClick={() => handleAction('shared')}
-              className="flex items-center space-x-2 bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg transition-colors"
-            >
-              <Users className="w-4 h-4" />
-              <span>Add to Shared</span>
-            </button>
-
-            {trailer && (
-              <a
-                href={`https://www.youtube.com/watch?v=${trailer.key}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center space-x-2 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-colors"
-              >
-                <Play className="w-4 h-4" />
-                <span>Watch Trailer</span>
-              </a>
-            )}
-          </div>
-
-          {/* Rating Section */}
-          {isRating && (
-            <div className="p-4 bg-gray-50 rounded-lg">
-              <h3 className="font-medium mb-3">Rate this movie</h3>
-              <div className="flex items-center space-x-2">
-                {[1, 2, 3, 4, 5].map(star => (
-                  <button
-                    key={star}
-                    onClick={() => setRating(star)}
-                    className="p-1 hover:scale-110 transition-transform"
-                  >
-                    <Star
-                      className={`w-6 h-6 ${
-                        star <= rating
-                          ? 'text-yellow-400 fill-current'
-                          : 'text-gray-300'
-                      }`}
-                    />
-                  </button>
-                ))}
-                <button
-                  onClick={() => handleAction('watched')}
-                  className="ml-4 bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-sm"
-                  disabled={rating === 0}
-                >
-                  Save
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Overview */}
-          <div>
-            <h3 className="font-semibold text-gray-900 mb-2">Overview</h3>
-            <p className="text-gray-700 leading-relaxed">{movie.overview}</p>
-          </div>
-
-          {/* Genres */}
-          {movie.genres?.length && (
-            <div>
-              <h3 className="font-semibold text-gray-900 mb-2">Genres</h3>
-              <div className="flex flex-wrap gap-2">
-                {movie.genres.map(genre => (
-                  <span
-                    key={genre.id}
-                    className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm"
-                  >
-                    {genre.name}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Additional Info */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {movie.director && (
-              <div className="flex items-start space-x-3">
-                <Users className="w-5 h-5 text-gray-400 mt-1" />
-                <div>
-                  <div className="text-sm text-gray-500">Director</div>
-                  <div className="font-medium text-gray-900">{movie.director}</div>
-                </div>
-              </div>
-            )}
-            
-            {movie.actors && (
-              <div className="flex items-start space-x-3">
-                <Users className="w-5 h-5 text-gray-400 mt-1" />
-                <div>
-                  <div className="text-sm text-gray-500">Cast</div>
-                  <div className="font-medium text-gray-900">{movie.actors}</div>
-                </div>
-              </div>
-            )}
-
-            {movie.boxOffice && (
-              <div className="flex items-start space-x-3">
-                <DollarSign className="w-5 h-5 text-gray-400 mt-1" />
-                <div>
-                  <div className="text-sm text-gray-500">Box Office</div>
-                  <div className="font-medium text-gray-900">{movie.boxOffice}</div>
-                </div>
-              </div>
-            )}
-
-            {movie.awards && (
-              <div className="flex items-start space-x-3">
-                <Award className="w-5 h-5 text-gray-400 mt-1" />
-                <div>
-                  <div className="text-sm text-gray-500">Awards</div>
-                  <div className="font-medium text-gray-900">{movie.awards}</div>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
+  credits?: {
+    cast: Person[];
+    crew: Person[];
+  };
+  director?: string;
+  actors?: string;
+  boxOffice?: string;
+  awards?: string;
 }
+
+export interface Person {
+  id: number;
+  name: string;
+  profile_path: string | null;
+  popularity: number;
+  known_for_department: string;
+  gender: number;
+  adult: boolean;
+  known_for: Movie[];
+  job?: string;
+  department?: string;
+  character?: string;
+  cast_id?: number;
+  credit_id?: string;
+  order?: number;
+}
+
+export interface SearchResponse {
+  page: number;
+  results: Movie[];
+  total_pages: number;
+  total_results: number;
+}
+
+export interface PersonSearchResponse {
+  page: number;
+  results: Person[];
+  total_pages: number;
+  total_results: number;
+}
+
+export interface Genre {
+  id: number;
+  name: string;
+}
+
+export interface GenreResponse {
+  genres: Genre[];
+}
+
+class TMDBService {
+  private cache = new Map<string, any>();
+  private cacheTimeout = 5 * 60 * 1000; // 5 minutes
+
+  private async fetchWithCache<T>(url: string): Promise<T> {
+    const cacheKey = url;
+    const cached = this.cache.get(cacheKey);
+    
+    if (cached && Date.now() - cached.timestamp < this.cacheTimeout) {
+      return cached.data;
+    }
+
+    try {
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const data = await response.json();
+      
+      this.cache.set(cacheKey, {
+        data,
+        timestamp: Date.now()
+      });
+      
+      return data;
+    } catch (error) {
+      console.error('TMDB API Error:', error);
+      throw error;
+    }
+  }
+
+  async searchMovies(query: string, page = 1): Promise<SearchResponse> {
+    const url = `${TMDB_BASE_URL}/search/movie?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(query)}&page=${page}&include_adult=false`;
+    return this.fetchWithCache<SearchResponse>(url);
+  }
+
+  async searchPeople(query: string, page = 1): Promise<PersonSearchResponse> {
+    const url = `${TMDB_BASE_URL}/search/person?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(query)}&page=${page}&include_adult=false`;
+    return this.fetchWithCache<PersonSearchResponse>(url);
+  }
+
+  async searchMulti(query: string, page = 1): Promise<{ results: (Movie | Person)[] }> {
+    const url = `${TMDB_BASE_URL}/search/multi?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(query)}&page=${page}&include_adult=false`;
+    return this.fetchWithCache<{ results: (Movie | Person)[] }>(url);
+  }
+
+  async getMovieDetails(movieId: number): Promise<MovieDetails> {
+    const url = `${TMDB_BASE_URL}/movie/${movieId}?api_key=${TMDB_API_KEY}&append_to_response=videos,credits`;
+    const movie = await this.fetchWithCache<MovieDetails>(url);
+    
+    // Extract director and main actors
+    if (movie.credits) {
+      const director = movie.credits.crew.find(person => person.job === 'Director');
+      movie.director = director?.name;
+      
+      const mainActors = movie.credits.cast.slice(0, 5).map(actor => actor.name);
+      movie.actors = mainActors.join(', ');
+    }
+    
+    return movie;
+  }
+
+  async getPersonDetails(personId: number): Promise<Person> {
+    const url = `${TMDB_BASE_URL}/person/${personId}?api_key=${TMDB_API_KEY}&append_to_response=movie_credits`;
+    return this.fetchWithCache<Person>(url);
+  }
+
+  async getPersonMovies(personId: number): Promise<Movie[]> {
+    const url = `${TMDB_BASE_URL}/person/${personId}/movie_credits?api_key=${TMDB_API_KEY}`;
+    const response = await this.fetchWithCache<{ cast: Movie[]; crew: Movie[] }>(url);
+    
+    // Combine cast and crew movies, remove duplicates, sort by popularity
+    const allMovies = [...response.cast, ...response.crew];
+    const uniqueMovies = allMovies.filter((movie, index, self) => 
+      index === self.findIndex(m => m.id === movie.id)
+    );
+    
+    return uniqueMovies
+      .sort((a, b) => b.popularity - a.popularity)
+      .slice(0, 20); // Limit to top 20 movies
+  }
+
+  async getGenres(): Promise<Genre[]> {
+    const url = `${TMDB_BASE_URL}/genre/movie/list?api_key=${TMDB_API_KEY}`;
+    const response = await this.fetchWithCache<GenreResponse>(url);
+    return response.genres;
+  }
+
+  async getMoviesByGenre(genreId: number, page = 1): Promise<SearchResponse> {
+    const url = `${TMDB_BASE_URL}/discover/movie?api_key=${TMDB_API_KEY}&with_genres=${genreId}&page=${page}&sort_by=popularity.desc&include_adult=false`;
+    return this.fetchWithCache<SearchResponse>(url);
+  }
+
+  async getMoviesByYear(year: number, page = 1): Promise<SearchResponse> {
+    const url = `${TMDB_BASE_URL}/discover/movie?api_key=${TMDB_API_KEY}&primary_release_year=${year}&page=${page}&sort_by=popularity.desc&include_adult=false`;
+    return this.fetchWithCache<SearchResponse>(url);
+  }
+
+  async getPopularMovies(page = 1): Promise<SearchResponse> {
+    const url = `${TMDB_BASE_URL}/movie/popular?api_key=${TMDB_API_KEY}&page=${page}`;
+    return this.fetchWithCache<SearchResponse>(url);
+  }
+
+  async getTrendingMovies(timeWindow: 'day' | 'week' = 'week'): Promise<SearchResponse> {
+    const url = `${TMDB_BASE_URL}/trending/movie/${timeWindow}?api_key=${TMDB_API_KEY}`;
+    return this.fetchWithCache<SearchResponse>(url);
+  }
+
+  async getUpcomingMovies(page = 1): Promise<SearchResponse> {
+    const url = `${TMDB_BASE_URL}/movie/upcoming?api_key=${TMDB_API_KEY}&page=${page}`;
+    return this.fetchWithCache<SearchResponse>(url);
+  }
+
+  async getTopRatedMovies(page = 1): Promise<SearchResponse> {
+    const url = `${TMDB_BASE_URL}/movie/top_rated?api_key=${TMDB_API_KEY}&page=${page}`;
+    return this.fetchWithCache<SearchResponse>(url);
+  }
+
+  getImageUrl(path: string | null, size: 'w200' | 'w300' | 'w500' | 'w780' | 'original' = 'w500'): string | null {
+    if (!path) return null;
+    return `https://image.tmdb.org/t/p/${size}${path}`;
+  }
+
+  getYouTubeUrl(key: string): string {
+    return `https://www.youtube.com/watch?v=${key}`;
+  }
+}
+
+export const tmdbService = new TMDBService();
