@@ -222,6 +222,9 @@ class TMDBService {
   getYouTubeUrl(key: string): string {
     return `https://www.youtube.com/watch?v=${key}`;
   }
-}
 
-export const tmdbService = new TMDBService();
+  async getMovieRecommendations(movieId: number): Promise<SearchResponse> {
+    const url = `${TMDB_BASE_URL}/movie/${movieId}/recommendations?api_key=${TMDB_API_KEY}`;
+    return this.fetchWithCache<SearchResponse>(url);
+  }
+}
